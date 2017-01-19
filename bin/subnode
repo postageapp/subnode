@@ -1,0 +1,48 @@
+#!/usr/bin/env node
+
+// == Imports ===============================================================
+
+const Child = require('../lib/child');
+
+// == Main ==================================================================
+
+var program = require('commander');
+
+program
+  .usage('[options] <source>')
+  .option('-no-tty', 'Do not emulate being a TTY (disable ANSI, etc.)')
+  .option('-k --kill', 'Kill previously runing processes for same source file')
+  .option('-t --timeout [timeout]', 'Cancel process after <timeout> seconds')
+  .option('--debug', 'Provide debugging contextual information')
+  .option('--dry-run', 'Show commands that would be executed')
+  .version(require('../package.json').version);
+
+program.parse(process.argv);
+
+var target = program.args[0];
+
+if (typeof(target) == 'undefined') {
+  program.outputHelp();
+
+  process.exit(0);
+}
+
+var child = new Child(target, [ ], { tty: !program.noTty });
+
+if (program.dryRun || program.debug) {
+  console.log(child.launchArgs().join(' '));
+}
+
+if (program.dryRun) {
+  process.exit(0);  
+}
+
+var pid = child.spawn();
+
+if (program.timeout) {
+  setTimeout(() => {
+    child.kill();
+  }, program.timeout);
+}
+
+child.join();
